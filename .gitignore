@@ -1,0 +1,20 @@
+# eclipse
+
+.project
+.classpath
+.settings/
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
+
+# Maven
+log/
+target/
+
+jql-core/dependency-reduced-pom.xml
+jql-shell/dependency-reduced-pom.xml
