@@ -23,8 +23,12 @@
  */
 package io.github.benas.jql.domain;
 
+import io.github.benas.jql.model.ClassCodeResult;
 import io.github.benas.jql.model.ClassTradeCode;
+import io.github.benas.jql.model.DiffCodeClazz;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -46,7 +50,7 @@ public class ClassTradeCodeDao extends BaseDao {
 
     public List<Map<String, Object>> generateThreeLinkRoadList() {
         List<Map<String, Object>> maps = jdbcTemplate.queryForList("select * from \n" +
-                "    (SELECT onecode.code as code,onec.id AS oneclassid,onec.PACKAGE||'.'||onec.name AS oneclassName,onem.name AS onemethodname,\n" +
+                "    (SELECT onecode.code as code,onecode.name as codeName,onec.id AS oneclassid,onec.PACKAGE||'.'||onec.name AS oneclassName,onem.name AS onemethodname,\n" +
                 "\t\t    twoc.id AS twoclassid, twoc.PACKAGE||'.'||twoc.name AS twoclassname, twom.name AS twomethodname,\n" +
                 "\t        threec.id AS threeclassid, threec.PACKAGE||'.'||threec.name AS threeclassname, threecm.name AS threemethodname\n" +
                 "\t\tFROM COMPILATION_UNIT onec\n" +
@@ -66,12 +70,28 @@ public class ClassTradeCodeDao extends BaseDao {
 
     public int saveThreeLinkRoad(Map<String,Object> map) {
         int classTradeCodeId = getNextId("THREE_LINKROAD");
-        jdbcTemplate.update("insert into THREE_LINKROAD values (?,?,?,?,?,?,?,?,?,?,?)", classTradeCodeId, (String)map.get("code"),
+        jdbcTemplate.update("insert into THREE_LINKROAD values (?,?,?,?,?,?,?,?,?,?,?,?)", classTradeCodeId, (String)map.get("code"),(String)map.get("codeName"),
                 (Integer)map.get("oneclassid"),(String)map.get("oneclassName"), (String)map.get("onemethodname"),
                 (Integer)map.get("twoclassid"),(String)map.get("twoclassName"), (String)map.get("twomethodname"),
                 (Integer)map.get("threeclassid"),(String)map.get("threeclassName"),(String)map.get("threemethodname")
         );
         return classTradeCodeId;
+    }
+
+
+    public List<ClassCodeResult> getCodeForClassMethodChange(DiffCodeClazz diffCodeClazz) {
+
+        return jdbcTemplate.query("\tselect * from (\n" +
+                        "\t\tselect code,codeName,'1' as level from THREE_LINKROAD where (ONECLASSNAME=? and ONEMETHODNAME=?) \n" +
+                        "\t\tunion \n" +
+                        "\t\tselect code,codeName,'2' as level from THREE_LINKROAD where  (TWOCLASSNAME=? and TWOMETHODNAME=?)\n" +
+                        "\t\tunion \n" +
+                        "\t\tselect code,codeName,'3' as level from THREE_LINKROAD where  (THREECLASSNAME=? and THREEMETHODNAME=?)\n" +
+                        "\t) group by code,codeName",
+                new Object[]{diffCodeClazz.getClassName(),diffCodeClazz.getMethodName(),
+                diffCodeClazz.getClassName(),diffCodeClazz.getMethodName(),diffCodeClazz.getClassName(), diffCodeClazz.getMethodName()},
+                new BeanPropertyRowMapper<ClassCodeResult>(ClassCodeResult.class));
+
     }
 
 }
